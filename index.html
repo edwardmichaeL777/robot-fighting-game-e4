@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機器人拳擊賽</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #game {
+            text-align: center;
+        }
+        #gameCanvas {
+            border: 1px solid black;
+            background-color: #e0e0e0;
+        }
+        #timer, #scores, #result {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        #restartButton {
+            margin-top: 20px;
+            display: none;
+        }
+        #languageSelector {
+            margin-bottom: 20px;
+        }
+        #languageLabel {
+            font-size: 18px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <h1 id="title">機器人拳擊賽</h1>
+        <div>
+            <label id="languageLabel" for="languageSelector">語言：</label>
+            <select id="languageSelector">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+        <button id="startButton">開始遊戲</button>
+        <p id="instructions" style="display: none;">機器人A: 按'Z'出拳 | 機器人B: 按'L'出拳</p>
+        <div id="timer" style="display: none;">時間: 15秒</div>
+        <div id="scores" style="display: none;">機器人A: 0 | 機器人B: 0</div>
+        <canvas id="gameCanvas" width="400" height="300" style="display: none;"></canvas>
+        <div id="result"></div>
+        <button id="restartButton">再來一次</button>
+    </div>
+
+    <script>
+        let scoreA = 0;
+        let scoreB = 0;
+        let timeLeft = 15;
+        let gameInterval;
+        let lastPunchTimeA = 0;
+        let lastPunchTimeB = 0;
+        const reactionTime = 70; // 反應時間
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let language = 'zh';
+
+        function drawRobot(x, y, color, isPunching) {
+            // 身體
+            ctx.fillStyle = color;
+            ctx.fillRect(x - 25, y - 50, 50, 80);
+            
+            // 頭部
+            ctx.fillRect(x - 20, y - 80, 40, 30);
+            
+            // 眼睛
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x - 15, y - 75, 10, 10);
+            ctx.fillRect(x + 5, y - 75, 10, 10);
+            
+            // 手臂
+            if (isPunching) {
+                ctx.fillStyle = color;
+                ctx.fillRect(x + (color === 'blue' ? 25 : -65), y - 40, 40, 20);
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(x + (color === 'blue' ? 25 : -35), y - 40, 10, 60);
+            }
+            
+            // 腿
+            ctx.fillRect(x - 20, y + 30, 15, 40);
+            ctx.fillRect(x + 5, y + 30, 15, 40);
+        }
+
+        function drawRobots(isAPunching, isBPunching) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRobot(150, 200, 'blue', isAPunching);
+            drawRobot(250, 200, 'red', isBPunching);
+        }
+
+        function updateScores() {
+            document.getElementById('scores').textContent = `機器人A: ${scoreA} | 機器人B: ${scoreB}`;
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            document.removeEventListener('keydown', handleKeyPress);
+
+            let resultText = language === 'zh' ? 
+                `遊戲結束！機器人A得分: ${scoreA}, 機器人B得分: ${scoreB}<br>` :
+                `Game Over! Robot A Score: ${scoreA}, Robot B Score: ${scoreB}<br>`;
+            if (scoreA > scoreB) {
+                resultText += language === 'zh' ? "機器人A獲勝！" : "Robot A Wins!";
+            } else if (scoreB > scoreA) {
+                resultText += language === 'zh' ? "機器人B獲勝！" : "Robot B Wins!";
+            } else {
+                resultText += language === 'zh' ? "平局！" : "It's a Tie!";
+            }
+            resultText += language === 'zh' ? "<br>感謝參與遊戲！<br>祝你有個愉快的一天！" : "<br>Thanks for playing!<br>Have a nice day!";
+            
+            document.getElementById('result').innerHTML = resultText;
+            document.getElementById('restartButton').style.display = 'block';
+        }
+
+        function handleKeyPress(event) {
+            const currentTime = Date.now();
+            if (event.key.toLowerCase() === 'z') {
+                if (currentTime - lastPunchTimeA > reactionTime) {
+                    scoreA++;
+                    lastPunchTimeA = currentTime;
+                } else {
+                    lastPunchTimeA = currentTime;
+                }
+                drawRobots(true, false);
+                setTimeout(() => drawRobots(false, false), 150);
+            } else if (event.key.toLowerCase() === 'l') {
+                if (currentTime - lastPunchTimeB > reactionTime) {
+                    scoreB++;
+                    lastPunchTimeB = currentTime;
+                } else {
+                    lastPunchTimeB = currentTime;
+                }
+                drawRobots(false, true);
+                setTimeout(() => drawRobots(false, false), 150);
+            }
+            updateScores();
+        }
+
+        function startGame() {
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('instructions').style.display = 'block';
+            document.getElementById('timer').style.display = 'block';
+            document.getElementById('scores').style.display = 'block';
+            document.getElementById('gameCanvas').style.display = 'block';
+
+            document.addEventListener('keydown', handleKeyPress);
+            drawRobots(false, false);
+            document.getElementById('restartButton').style.display = 'none';
+            gameInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = language === 'zh' ? `時間: ${timeLeft}秒` : `Time: ${timeLeft} seconds`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            scoreA = 0;
+            scoreB = 0;
+            timeLeft = 15;
+            lastPunchTimeA = 0;
+            lastPunchTimeB = 0;
+            document.getElementById('result').innerHTML = '';
+            updateScores();
+            startGame();
+        });
+
+        document.getElementById('startButton').addEventListener('click', startGame);
+
+        document.getElementById('languageSelector').addEventListener('change', (event) => {
+            language = event.target.value;
+            if (language === 'en') {
+                document.getElementById('title').textContent = 'Robot Boxing Match';
+                document.getElementById('instructions').textContent = "Robot A: Press 'Z' to punch | Robot B: Press 'L' to punch";
+                document.getElementById('timer').textContent = 'Time: 15 seconds';
+                document.getElementById('restartButton').textContent = 'Restart';
+                document.getElementById('startButton').textContent = 'Start Game';
+                document.getElementById('languageLabel').textContent = 'Language:';
+            } else {
+                document.getElementById('title').textContent = '機器人拳擊賽';
+                document.getElementById('instructions').textContent = "機器人A: 按'Z'出拳 | 機器人B: 按'L'出拳";
+                document.getElementById('timer').textContent = '時間: 15秒';
+                document.getElementById('restartButton').textContent = '再來一次';
+                document.getElementById('startButton').textContent = '開始遊戲';
+                document.getElementById('languageLabel').textContent = '語言：';
+            }
+        });
+
+    </script>
+</body>
+</html>
